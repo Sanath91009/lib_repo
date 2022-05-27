@@ -1,0 +1,104 @@
+schema_version: 2.0.0
+service_name: sparkdocker
+service_type: java_standard
+backend_port: 7559
+debian_packages_for_runtime:
+  - name: scala
+  - name: gfortran
+  - name: libblas-dev
+  - name: liblapack-dev
+  - name: libatlas-base-dev
+  - name: libgeos-dev
+  - name: unzip
+  - name: uber-yab
+  - name: python
+  - name: python3
+  - name: python3-pip
+  - name: python-pip
+  - name: python-dev
+  - name: python3-dev
+  - name: unsutils
+  - name: hadoop-2.8.2-433
+  - name: wget
+  - name: python3-pandas
+java_standard:
+  jdk_version: openjdk-11
+  jdk_runtime: openjdk-8
+  pre_build_cmds:
+    - RUN wget https://www.python.org/ftp/python/3.6.9/Python-3.6.9.tgz
+    - RUN tar -xf Python-3.6.9.tgz
+    - RUN cd Python-3.6.9 && ./configure --enable-optimizations && make install
+    - RUN rm /usr/bin/python
+    - RUN ln -s /usr/bin/python3 /usr/bin/python
+    - RUN sed -i s/python/python2/ /sbin/log_bash_history
+    - RUN python3 --version
+    - RUN python --version
+    - RUN python3 -m pip install --upgrade pip
+
+    - RUN chmod 777 /root/
+    - RUN chmod 777 /home/udocker/sparkdocker/
+    # download michelangelo-bin.jar
+    - ENV MICHELANGELO_BIN_JAR_VERSION=0.7-20220204-184329
+    - RUN curl http://artifactory.uber.internal:4587/artifactory/fievel-code/com/uber/fievel/michelangelo/michelangelo_bin/${MICHELANGELO_BIN_JAR_VERSION}/michelangelo_bin-${MICHELANGELO_BIN_JAR_VERSION}.jar -o /home/udocker/sparkdocker/michelangelo_bin.jar
+    # upgrade legacy pip
+    - RUN pip install -U pip
+    - RUN pip3 install -U pip
+    - RUN pip3 --version
+    - RUN pip3 install -U setuptools
+    - RUN which pip3
+    # install neuropod
+    - ENV NEUROPOD_VERSION=0.3.0rc5
+    - ENV NEUROPOD_CUSTOM_VERSION=${NEUROPOD_VERSION}-20220201
+    - ENV NEUROPOD_BASE_DIR="/usr/local/lib/neuropod"
+    - ENV NEUROPOD_LOG_LEVEL="INFO"
+    - RUN python3 -m pip install -U "neuropod==${NEUROPOD_VERSION}"
+    - RUN mkdir -p "${NEUROPOD_BASE_DIR}"
+    - RUN curl -L http://artifactory.uber.internal:4587/artifactory/libs-java-local/com/uber/neuropod/${NEUROPOD_VERSION}_custom/backends/libneuropod-cpu-linux-${NEUROPOD_CUSTOM_VERSION}-pythonbridge-36-backend.tar.gz | tar -xz -C "${NEUROPOD_BASE_DIR}"
+    # install pyml
+    - RUN python3 -m pip install pyml==2.0.7
+
+    # For Michelangelo users:
+    # Please specify all the Python packages that are required by your models here. Otherwise, your models may run into ModuleNotFoundError.
+    # Example: '- RUN python3 -m pip install scikit-learn'
+    - RUN python3 -m pip install scikit-learn
+    - RUN python3 -m pip install Unidecode
+    - RUN python3 -m pip install contractions
+    - RUN python3 -m pip install word2number
+    - RUN python3 -m pip install spacy
+    - RUN python3 spacy download en
+  build_cmds:
+    - RUN echo hello
+debian_packages_for_build:
+  - name: scala
+  - name: gfortran
+  - name: libblas-dev
+  - name: liblapack-dev
+  - name: libatlas-base-dev
+  - name: libgeos-dev
+  - name: build-essential
+  - name: libssl-dev
+  - name: zlib1g-dev
+  - name: libbz2-dev
+  - name: libreadline-dev
+  - name: libsqlite3-dev
+  - name: wget
+  - name: curl
+  - name: libncursesw5-dev
+  - name: tk-dev
+  - name: python
+  - name: python3
+  - name: python3-pip
+  - name: python-pip
+  - name: python3-pandas
+  - name: python-dev
+  - name: python3-dev
+  - name: unsutils
+  - name: hadoop-2.8.2-433
+  - name: openjdk-11-dbg
+
+applications:
+  - app_type: command_line
+    command_line:
+      run_cmd: python -m SimpleHTTPServer 7559
+    health_check: none
+    udeploy_app_id: sparkdocker
